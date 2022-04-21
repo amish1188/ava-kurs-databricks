@@ -125,11 +125,10 @@ display(baseDF.select("price"))
 
 # COMMAND ----------
 
-# TODO: Replace <FILL_IN> with appropriate code
 
 fixedPriceDF = (baseDF
-                .<FILL_IN>
-               )
+                .withColumnRenamed("price", "price_raw")
+                .withColumn("price", convert_price_udf(col("price_raw")).cast("Decimal(10,2)")))
 
 # COMMAND ----------
 
@@ -159,7 +158,7 @@ print("Tests passed.")
 # COMMAND ----------
 
 # TODO: Get rid of price_raw column
-fixedPriceDF = fixedPriceDF.<FILL_IN>
+fixedPriceDF = fixedPriceDF.drop("price_raw")
 
 # COMMAND ----------
 
@@ -171,11 +170,21 @@ fixedPriceDF = fixedPriceDF.<FILL_IN>
 
 # COMMAND ----------
 
-# TODO: Replace <FILL_IN> with appropriate code
-
 changedBooleanDF = (fixedPriceDF
-                    .<FILL_IN>
+                    .withColumnRenamed("host_is_superhost", "host_is_superhost_raw")
+                    .withColumnRenamed("instant_bookable", "instant_bookable_raw")
+                    .withColumn("host_is_superhost",
+                                when(col("host_is_superhost_raw") == "f", False)
+                                .otherwise(True)
+                               )
+                    .withColumn("instant_bookable",
+                                when(col("instant_bookable_raw") == "f", False)
+                                .otherwise(True)
+                               )
                    )
+
+#Make sure to remove original columns if you have any
+changedBooleanDF = changedBooleanDF.drop("host_is_superhost_raw", "instant_bookable_raw")
 
 # COMMAND ----------
 
@@ -269,8 +278,7 @@ print("Tests passed.")
 
 # COMMAND ----------
 
-# TODO: Replace <FILL_IN> with appropriate code
-display(imputedDF.<FILL_IN>)
+display(imputedDF.select("price").describe())
 
 # COMMAND ----------
 
@@ -280,9 +288,7 @@ display(imputedDF.<FILL_IN>)
 
 # COMMAND ----------
 
-# TODO: Replace <FILL_IN> with appropriate code
-
-imputedDF.<FILL_IN>
+display(imputedDF.select("price").describe())
 
 # COMMAND ----------
 
@@ -301,9 +307,8 @@ display(imputedDF.select("price").where("price < 2500"))
 
 # COMMAND ----------
 
-# TODO: Replace <FILL_IN> with appropriate code
 
-posPricesDF = <FILL_IN>
+posPricesDF = imputedDF.filter("price between 1 and 2100")
 
 # COMMAND ----------
 
@@ -350,7 +355,9 @@ display(posPricesDF.groupBy("minimum_nights").count().orderBy(col("minimum_night
 # COMMAND ----------
 
 # TODO: Replace <FILL_IN> with appropriate code
-cleanDF = posPricesDF.<FILL_IN>
+#cleanDF = posPricesDF.<FILL_IN>
+
+cleanDF = posPricesDF.filter(col("minimum_nights") <= 30)
 
 # COMMAND ----------
 
@@ -405,8 +412,10 @@ repo = g.get_user().get_repo("ava-kurs-databricks")
 try:
   contents = repo.get_contents("Test/data-cleansing/data-files/airbnb.csv")
   repo.update_file(contents.path, "updated airbnb.csv", file, contents.sha, branch="data-cleaning")
+  print("File updated")
 except Exception as e :
   if e.args[0] == 404:
     repo.create_file("Test/data-cleansing/data-files/airbnb.csv", "created airbnb.csv", file, branch="data-cleaning")
+    print("File created")
   else:
     print(e)
